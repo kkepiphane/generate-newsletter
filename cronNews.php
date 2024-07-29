@@ -6,9 +6,9 @@ require_once("../../../../class/Bdd.php");
 $bd = new Bdd();
 $bdd = $bd->connect();
 
-$sourceDirectory = 'Datamart/New/v4/partials/cron/';
+$sourceDirectory = '';
 // Répertoire de destination pour les fichiers traités
-$destinationDirectory = 'Datamart/New/v4/partials/cron/data_news/';
+$destinationDirectory = 'data_news/';
 
 // Obtenir tous les fichiers CSV dans le répertoire source
 $csvFiles = glob($sourceDirectory . '*.csv');
