@@ -1,8 +1,11 @@
 <?php
+
+//pour trouver les bugs
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once("../../../../class/Bdd.php");
+//appel et connexion à la base de donnée
+require_once("class/Bdd.php");
 $bd = new Bdd();
 $bdd = $bd->connect();
 
