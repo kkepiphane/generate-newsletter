@@ -38,7 +38,7 @@ foreach ($csvFiles as $csvFile) {
                         //l'adresse ou destination
                         $address = $data[$addressIndex];
 
-                        //date d'envoie des news
+                        //date d'envoie des news	
                         $datesend = $data[$dateIndex];
 
                         if($data[$langIndex] == 'fr'){
