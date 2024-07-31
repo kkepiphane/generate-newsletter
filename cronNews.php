@@ -1,10 +1,8 @@
 <?php
-
-//pour trouver les bugs
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-//appel et connexion à la base de donnée
+//Connexion à la base de données
 require_once("class/Bdd.php");
 $bd = new Bdd();
 $bdd = $bd->connect();
@@ -29,21 +27,42 @@ foreach ($csvFiles as $csvFile) {
             $imagesIndex = array_search('Image URL', $header);
             $addressIndex = array_search('listivo_153_address', $header);
             $langIndex = array_search('lang', $header);
+            $dateIndex = array_search('date_pub', $header);
 
             $line_count = 0;
             while (($data = fgetcsv($handle, 1000, ",")) !== FALSE && $line_count < 10) {
                 if ($imagesIndex !== FALSE) {
 
-                    if($data[$langIndex] == 'fr'){
-                        $pricetitle = "à partir de ";
-                        $templates = file_get_contents('template_fr.html');
+                    if($line_count == 0){
 
-                    }elseif($data[$langIndex] == 'en'){
-                        $pricetitle = "from";
-                        $templates = file_get_contents('template_en.html');
-                    }else{
-                        $templates = file_get_contents('template_de.html');
+                        //l'adresse ou destination
+                        $address = $data[$addressIndex];
+
+                        //date d'envoie des news
+                        $datesend = $data[$dateIndex];
+
+                        if($data[$langIndex] == 'fr'){
+                            $pricetitle = "à partir de ";
+                            $templates = file_get_contents('template_fr.html');
+                            $pricesymbole = "€";
+    
+                        }elseif($data[$langIndex] == 'en'){
+                            $pricetitle = "from ";
+                            $pricesymbole = "$ ";
+                            $templates = file_get_contents('template_en.html');
+                        }elseif($data[$langIndex] == 'de'){
+                            $pricetitle = "ab ";
+                            $pricesymbole = "€";
+                            $templates = file_get_contents('template_de.html');
+                        }
+                        else{
+                            $templates = file_get_contents('template_en.html');
+                            $pricetitle = "from ";
+                            $pricesymbole = "€";
+                        }
                     }
+
+                   
 
                     $datacontent .= '<tr>
                         <td align="left" bgcolor="#f5f5f5" style="Margin:0;padding-bottom:10px;padding-top:20px;padding-left:20px;padding-right:20px;background-color:#f5f5f5">
@@ -82,7 +101,7 @@ foreach ($csvFiles as $csvFile) {
                                             </tr>
                                             <tr>
                                                 <td align="left" style="Margin:0;padding-top:5px;padding-bottom:5px;padding-left:15px;padding-right:15px">
-                                                    <h3 style="Margin:0;line-height:22px;mso-line-height-rule:exactly;font-family:arial, \'helvetica neue\', helvetica, sans-serif;font-size:18px;font-style:normal;font-weight:bold;color:#005ABF">'. htmlspecialchars($pricetitle) .'<span style="color:#A9A9A9">€'. htmlspecialchars($data[$priceIndex]) .'</span></h3>
+                                                    <h3 style="Margin:0;line-height:22px;mso-line-height-rule:exactly;font-family:arial, \'helvetica neue\', helvetica, sans-serif;font-size:18px;font-style:normal;font-weight:bold;color:#005ABF">'. htmlspecialchars($pricetitle) .'<span style="color:#A9A9A9">'. htmlspecialchars($pricesymbole) .''. htmlspecialchars($data[$priceIndex]) .'</span></h3>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -105,7 +124,6 @@ foreach ($csvFiles as $csvFile) {
                     </tr>';
                 }
                 $line_count++;
-                $address = $data[$addressIndex];
             }
         }
         fclose($handle);
@@ -122,8 +140,8 @@ foreach ($csvFiles as $csvFile) {
         $template_news = str_replace('<div id="pub"></div>', $datacontent, $templates);
 
         // Insertion dans la base de données
-        $insertStmt = $bdd->prepare('INSERT INTO news_template (address, template, date_input) VALUES (?, ?, NOW())');
-        $insertStmt->execute([$address, $template_news]);
+        $insertStmt = $bdd->prepare('INSERT INTO news_template (address, template, date_send, date_input) VALUES (?, ?, ?, NOW())');
+        $insertStmt->execute([$address, $template_news, $datesend]);
 
         echo "Insertion réussie avec succès\n";
     }
