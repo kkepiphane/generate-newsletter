@@ -2,23 +2,25 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-//Connexion à la base de données
+//connexion à la de données
 require_once("class/Bdd.php");
 $bd = new Bdd();
 $bdd = $bd->connect();
 
+// Répertoire d'origine des fichiers traités
 $sourceDirectory = '';
+
 // Répertoire de destination pour les fichiers traités
 $destinationDirectory = 'data_news/';
 
-// Obtenir tous les fichiers CSV dans le répertoire source
 $csvFiles = glob($sourceDirectory . '*.csv');
 
 foreach ($csvFiles as $csvFile) {
-    $datacontent = '';
     $address = '';
+    $datesend = '';
+    $datacontent = '';
+    $line_count = 0;
 
-   
     if (($handle = fopen($csvFile, "r")) !== FALSE) {
         if (($header = fgetcsv($handle, 1000, ",")) !== FALSE) {
             $titleIndex = array_search('Title', $header);
@@ -29,40 +31,34 @@ foreach ($csvFiles as $csvFile) {
             $langIndex = array_search('lang', $header);
             $dateIndex = array_search('date_pub', $header);
 
-            $line_count = 0;
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE && $line_count < 10) {
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
                 if ($imagesIndex !== FALSE) {
-
-                    if($line_count == 0){
+                    if ($line_count == 0) {
 
                         //l'adresse ou destination
                         $address = $data[$addressIndex];
 
-                        //date d'envoie des news	
+                        //date d'envoie des news
                         $datesend = $data[$dateIndex];
 
-                        if($data[$langIndex] == 'fr'){
+                        if ($data[$langIndex] == 'fr') {
                             $pricetitle = "à partir de ";
                             $templates = file_get_contents('template_fr.html');
                             $pricesymbole = "€";
-    
-                        }elseif($data[$langIndex] == 'en'){
+                        } elseif ($data[$langIndex] == 'en') {
                             $pricetitle = "from ";
                             $pricesymbole = "$ ";
                             $templates = file_get_contents('template_en.html');
-                        }elseif($data[$langIndex] == 'de'){
+                        } elseif ($data[$langIndex] == 'de') {
                             $pricetitle = "ab ";
                             $pricesymbole = "€";
                             $templates = file_get_contents('template_de.html');
-                        }
-                        else{
+                        } else {
                             $templates = file_get_contents('template_en.html');
                             $pricetitle = "from ";
                             $pricesymbole = "€";
                         }
                     }
-
-                   
 
                     $datacontent .= '<tr>
                         <td align="left" bgcolor="#f5f5f5" style="Margin:0;padding-bottom:10px;padding-top:20px;padding-left:20px;padding-right:20px;background-color:#f5f5f5">
@@ -122,27 +118,36 @@ foreach ($csvFiles as $csvFile) {
                             </table>
                         </td>
                     </tr>';
+
+                    $line_count++;
+
+                    if ($line_count == 10) {
+                        $template_news = str_replace('<div id="pub"></div>', $datacontent, $templates);
+
+                        $insertStmt = $bdd->prepare('INSERT INTO news_template (address, template, date_send, date_input) VALUES (?, ?, ?, NOW())');
+                        $insertStmt->execute([$address, $template_news, $datesend]);
+
+                        $datacontent = '';
+                        $line_count = 0;
+                    }
                 }
-                $line_count++;
+            }
+
+            if ($line_count > 0) {
+                $template_news = str_replace('<div id="pub"></div>', $datacontent, $templates);
+
+                $insertStmt = $bdd->prepare('INSERT INTO news_template (address, template, date_send, date_input) VALUES (?, ?, ?, NOW())');
+                $insertStmt->execute([$address, $template_news, $datesend]);
             }
         }
         fclose($handle);
 
-        // Déplacer le fichier traité vers le répertoire de destination
         $destinationFile = $destinationDirectory . basename($csvFile);
         if (rename($csvFile, $destinationFile)) {
             echo "Le fichier $csvFile a été déplacé vers $destinationFile\n";
         } else {
             echo "Erreur lors du déplacement du fichier $csvFile\n";
         }
-
-        // Remplacer le contenu du template
-        $template_news = str_replace('<div id="pub"></div>', $datacontent, $templates);
-
-        // Insertion dans la base de données
-        $insertStmt = $bdd->prepare('INSERT INTO news_template (address, template, date_send, date_input) VALUES (?, ?, ?, NOW())');
-        $insertStmt->execute([$address, $template_news, $datesend]);
-
-        echo "Insertion réussie avec succès\n";
     }
 }
+
