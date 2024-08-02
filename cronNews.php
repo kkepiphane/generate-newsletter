@@ -15,11 +15,11 @@ $destinationDirectory = 'data_news/';
 
 $csvFiles = glob($sourceDirectory . '*.csv');
 
+
 foreach ($csvFiles as $csvFile) {
-    $address = '';
-    $datesend = '';
-    $datacontent = '';
+    $dataGroups = [];
     $line_count = 0;
+    $datacontent = '';
 
     if (($handle = fopen($csvFile, "r")) !== FALSE) {
         if (($header = fgetcsv($handle, 1000, ",")) !== FALSE) {
@@ -31,16 +31,18 @@ foreach ($csvFiles as $csvFile) {
             $langIndex = array_search('lang', $header);
             $dateIndex = array_search('date_pub', $header);
 
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                if ($imagesIndex !== FALSE) {
+            while (($datas = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                $address = $datas[$addressIndex];
+                $datesend = $datas[$dateIndex];
+                $dataGroups[$address][$datesend][] = $datas;
+            }
+        }
+        fclose($handle);
+
+        foreach ($dataGroups as $address => $dates) {
+            foreach ($dates as $datesend => $rows) {
+                foreach ($rows as $data) {
                     if ($line_count == 0) {
-
-                        //l'adresse ou destination
-                        $address = $data[$addressIndex];
-
-                        //date d'envoie des news
-                        $datesend = $data[$dateIndex];
-
                         if ($data[$langIndex] == 'fr') {
                             $pricetitle = "à partir de ";
                             $templates = file_get_contents('template_fr.html');
@@ -68,7 +70,7 @@ foreach ($csvFiles as $csvFile) {
                                         <table cellpadding="0" cellspacing="0" width="100%" bgcolor="#ffffff" style="mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:separate;border-spacing:0px;background-color:#ffffff;border-radius:10px 10px 0px 0px" role="presentation">
                                             <tr>
                                                 <td align="center" style="padding:0;Margin:0;font-size:0px">
-                                                    <img class="adapt-img " src="'. htmlspecialchars($data[$imagesIndex]) .'" alt style="display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;border-radius:10px 10px 0px 0px" width="270" height="180">
+                                                    <img class="adapt-img" src="'. htmlspecialchars($data[$imagesIndex]) .'" alt style="display:block;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;border-radius:10px 10px 0px 0px" width="270" height="180">
                                                 </td>
                                             </tr>
                                         </table>
@@ -131,16 +133,18 @@ foreach ($csvFiles as $csvFile) {
                         $line_count = 0;
                     }
                 }
-            }
 
-            if ($line_count > 0) {
-                $template_news = str_replace('<div id="pub"></div>', $datacontent, $templates);
+                if ($line_count > 0) {
+                    $template_news = str_replace('<div id="pub"></div>', $datacontent, $templates);
 
-                $insertStmt = $bdd->prepare('INSERT INTO news_template (address, template, date_send, date_input) VALUES (?, ?, ?, NOW())');
-                $insertStmt->execute([$address, $template_news, $datesend]);
+                    $insertStmt = $bdd->prepare('INSERT INTO news_template (address, template, date_send, date_input) VALUES (?, ?, ?, NOW())');
+                    $insertStmt->execute([$address, $template_news, $datesend]);
+
+                    $datacontent = '';
+                    $line_count = 0;
+                }
             }
         }
-        fclose($handle);
 
         $destinationFile = $destinationDirectory . basename($csvFile);
         if (rename($csvFile, $destinationFile)) {
@@ -150,4 +154,4 @@ foreach ($csvFiles as $csvFile) {
         }
     }
 }
-
+?>
