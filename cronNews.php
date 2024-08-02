@@ -8,7 +8,7 @@ $bd = new Bdd();
 $bdd = $bd->connect();
 
 // Répertoire d'origine des fichiers traités
-$sourceDirectory = '';
+$sourceDirectory = '/home/data_news_input/';
 
 // Répertoire de destination pour les fichiers traités
 $destinationDirectory = 'data_news/';
